@@ -50,12 +50,12 @@ def make_pdf(data,number,url,logo_bytes=None):
     story += [p('05  CONDUCTOR E INDICACIONES','SectionA'),box([[p(driver.get('name')),p('DNI: '+driver.get('nif','')),p('Tel.: '+driver.get('phone',''))]],[220,155,140])]
     for key,label in [('instructions','Instrucciones al conductor'),('responsibility','Responsabilidad conjunta'),('authorization','Autorización especial'),('attachments','Referencias de adjuntos'),('observations','Observaciones')]:
         if data.get(key): story.append(p(label+': '+data[key]))
-    story += [Spacer(1,10),p('El QR abre directamente este PDF. El emisor debe entregarlo al conductor antes del inicio del servicio; si es una rectificación, debe entregar el nuevo PDF y QR.'),p('Conservación: 15 meses desde la finalización registrada del servicio. Borrado manual bloqueado durante el primer año. Este documento administrativo no incorpora firma contractual.')]
+    story += [Spacer(1,10),p('El QR abre directamente este PDF. El emisor debe entregarlo al conductor antes del inicio del servicio; si es una rectificación, debe entregar el nuevo PDF y QR.')]
     def footer(c,d):
         if data.get('_created_at'):
             instant=datetime.fromisoformat(data['_created_at']).astimezone(timezone.utc)
             c.setDateFormatter(lambda *args:instant.strftime('D:%Y%m%d%H%M%SZ'))
-        c.setStrokeColor(orange); c.line(40,33,555,33); c.setFont('Asemaco',7); c.setFillColor(HexColor('#676767')); c.drawString(40,21,'ASEMACO · Documento de control'); c.drawRightString(555,21,f'{number:06d} · Página {d.page}')
-    doc=SimpleDocTemplate(out,pagesize=A4,rightMargin=40,leftMargin=40,topMargin=22,bottomMargin=44,title=f'Documento de control {number:06d}',author='ASEMACO')
+        c.setStrokeColor(orange); c.line(40,33,555,33); c.setFont('Asemaco',7); c.setFillColor(HexColor('#676767')); c.drawString(40,21,'DECA . Documento de control'); c.drawRightString(555,21,f'{number:06d} · Página {d.page}')
+    doc=SimpleDocTemplate(out,pagesize=A4,rightMargin=40,leftMargin=40,topMargin=22,bottomMargin=44,title=f'Documento de control {number:06d}',author='DECA')
     doc.build(story,onFirstPage=footer,onLaterPages=footer)
     return out.getvalue()
