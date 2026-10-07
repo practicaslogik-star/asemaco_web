@@ -1,0 +1,20 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - asemaco_data:/app/data
+  retention:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    command: ["python", "retention_worker.py"]
+    depends_on:
+      - app
+    volumes:
+      - asemaco_data:/app/data
+volumes:
+  asemaco_data:
