@@ -1,0 +1,23 @@
+{% extends 'base.html' %}{% block content %}<div class="page-heading">
+    <div>
+        <div class="eyebrow">DATOS GUARDADOS</div>
+        <h1>Mi empresa</h1>
+        <p>Estos datos aparecerán como transportista por defecto. Puedes cambiarlos en cada documento.</p>
+    </div>
+</div>
+<form method="post" class="panel" enctype="multipart/form-data"><input type="hidden" name="csrf" value="{{ csrf }}">
+    <div class="form-grid">{% for key,label in profile_fields %}<label>{{ label }}<input name="{{ key }}"
+                value="{{ profile.get(key,'') }}" maxlength="300" {{ 'required' if key in ['name','nif'] }}></label>{%
+        endfor %}</div>
+    <section class="company-logo">
+        <h2>Logotipo de tu empresa</h2>{% if has_logo %}<img class="company-logo-preview"
+            src="{{ url_for('profile_logo') }}" alt="Logotipo guardado de tu empresa"><label class="checkbox"><input
+                type="checkbox" name="remove_logo" value="yes"><span>Quitar el logotipo y volver al de
+                ASEMACO</span></label>{% else %}<p class="muted">Actualmente se utiliza el logotipo de ASEMACO.</p>{%
+        endif %}<label>Subir o sustituir logotipo<input type="file" name="logo"
+                accept="image/png,image/jpeg,.png,.jpg,.jpeg"></label>
+        <p class="help">PNG o JPG, máximo 2 MB y 16 megapíxeles. Se ajustará al PDF conservando sus proporciones. El
+            cambio solo afecta a los documentos que generes a partir de ahora.</p>
+    </section>
+    <div class="form-actions"><button class="primary">Guardar datos de empresa</button></div>
+</form>{% endblock %}

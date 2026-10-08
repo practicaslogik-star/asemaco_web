@@ -1,0 +1,28 @@
+{% extends 'base.html' %}{% block content %}<div class="page-heading">
+    <div>
+        <div class="eyebrow">REUTILIZA TU INFORMACIÓN</div>
+        <h1>Datos habituales</h1>
+        <p>Guarda tus contactos y vehículos para seleccionarlos al preparar un documento.</p>
+    </div>
+</div>
+<nav class="tabs">{% for k,label in cat_names.items() %}<a class="{{ 'selected' if k==kind }}"
+        href="/catalogs?kind={{ k }}">{{ label }}</a>{% endfor %}</nav>
+<div class="split">
+    <form method="post" class="panel">
+        <h2>Añadir {{ cat_names[kind]|lower }}</h2><input type="hidden" name="csrf" value="{{ csrf }}">
+        <div class="form-grid">{% for key,label in cat_fields[kind] %}<label>{{ label }}<input name="{{ key }}"
+                    maxlength="300" {{ 'required' if key=='name' }}></label>{% endfor %}</div><button
+            class="primary">Guardar registro</button>
+    </form>
+    <section class="panel">
+        <h2>Registros guardados</h2>{% for e in entries %}<article class="saved-record">
+            <div><b>{{ e.info.name }}</b>
+                <p>{{ e.info.get('nif') or e.info.get('trailer','') }}</p>
+                <p>{{ e.info.get('address','') }} {{ e.info.get('city','') }}</p>
+            </div>
+            <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action"
+                    value="delete"><input type="hidden" name="id" value="{{ e.id }}"><button class="text-button danger"
+                    data-confirm="¿Eliminar este registro de tus datos habituales?">Eliminar</button></form>
+        </article>{% else %}<p class="muted">Todavía no has guardado registros en esta categoría.</p>{% endfor %}
+    </section>
+</div>{% endblock %}

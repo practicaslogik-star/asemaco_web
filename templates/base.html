@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}Documentos de control{% endblock %} · ASEMACO</title>
+    <link rel="stylesheet" href="{{ url_for('static',filename='app.css') }}">
+    <link rel="icon" href="{{ url_for('static',filename='favicon.svg') }}">
+    <link href="{{ url_for('static', filename='boxicons/css/boxicons.min.css') }}" rel='stylesheet'>
+
+    <script src="{{ url_for('static',filename='app.js') }}" defer></script>
+</head>
+
+<body>{% if user %}<aside class="sidebar"><a href="/" class="brand"><img
+                src="{{ url_for('static',filename='asemaco.jpg') }}" alt="ASEMACO"></a>
+        <div class="brand-caption">DOCUMENTOS DE CONTROL</div>
+        <nav>
+            {% if user.role == 'admin' %}
+            <a class="{{ 'active' if request.endpoint in ['home','document'] }}" href="/">Mis documentos</a>
+            <a class="{{ 'active' if request.endpoint=='new_document' }}" href="/documents/new">Nuevo documento</a>
+            <a class="{{ 'active' if request.endpoint=='profile' }}" href="/profile">Mi empresa</a>
+            <a class="{{ 'active' if request.endpoint=='admin' }}" href="/admin">Gestionar socios</a>
+            <a class="{{ 'active' if request.endpoint=='datos_habituales' }}" href="/datos_habituales">Datos habituales</a>
+            {% else %}
+            <a class="{{ 'active' if request.endpoint in ['home','document'] }}" href="/">Mis documentos</a>
+            <a class="{{ 'active' if request.endpoint=='new_document' }}" href="/documents/new">Nuevo documento</a>
+            <a class="{{ 'active' if request.endpoint=='profile' }}" href="/profile">Mi empresa</a>
+            <a class="{{ 'active' if request.endpoint=='datos_habituales' }}" href="/datos_habituales">Datos habituales</a>
+            {% endif %}
+        </nav>
+        <div class="account"><span class="account-email">{{ user.email }}</span><a href="/password">Cambiar
+                contraseña</a>
+            <form method="post" action="/logout"><input type="hidden" name="csrf" value="{{ csrf }}"><button
+                    class="text-button">Cerrar sesión</button></form>
+        </div>
+    </aside>{% endif %}
+    <main class="{{ 'workspace' if user else 'anonymous' }}">{% if user %}<header class="topbar"><span>Área de
+                socios</span><span class="badge">{{ 'Administración' if user.role=='admin' else 'Acceso personal'
+                }}</span></header>{% endif %}{% with messages=get_flashed_messages(with_categories=true) %}{% for
+        category,message in messages %}<div role="status" class="notice {{ category }}">{{ message }}</div>{% endfor
+        %}{% endwith %}{% if local_test %}<div class="notice"><b>Modo de prueba local.</b> Los QR usan HTTP y no son
+            válidos para uso operativo DeCA. Configura un dominio HTTPS con TLS 1.2 o superior antes de emitir
+            documentos reales.</div>{% endif %}{% block content %}{% endblock %}</main>
+</body>
+
+</html>
