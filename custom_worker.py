@@ -4,10 +4,15 @@ import sqlite3
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
-def limpiar_documentos_y_qr():
+def limpiar_documentos_y_qr(data_dir=None):
     # Configurar la ruta a la base de datos y carpeta de datos
-    directory = Path(os.environ.get('DATA_DIR', str(Path(__file__).parent / 'data')))
+    if data_dir is not None:
+        directory = Path(data_dir)
+    else:
+        directory = Path(os.environ.get('DATA_DIR', str(Path(__file__).parent / 'data')))
     db_path = directory / 'asemaco_new.sqlite3'
+    
+
     
     if not db_path.exists():
         print(f"Esperando a que la base de datos {db_path} sea creada...")

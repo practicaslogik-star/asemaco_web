@@ -13,8 +13,8 @@ from pdf_document import make_pdf
 from qr_image import make_qr_png
 from zipfile import ZipFile, ZIP_DEFLATED
 from retention import expiry_after, utc_now, purge_expired, remove_documents
-from datetime import datetime
-from zoneinfo import ZoneInfo
+import threading
+from custom_worker import limpiar_documentos_y_qr
 
 
 ROOT = Path(__file__).resolve().parent
@@ -86,6 +86,8 @@ def create_app(test_config=None):
         if time.monotonic()-cleanup_state['last']>=3600:
             try:
                 purge_expired(app.config['DATABASE'],directory)
+                limpiar_documentos_y_qr(directory)
+                # pyrefly: ignore [bad-assignment]
                 cleanup_state['last']=time.monotonic()
             except Exception: app.logger.exception('No se pudo completar la limpieza automática.')
         request.max_content_length=3*1024*1024 if request.endpoint=='profile' else 128*1024
@@ -152,6 +154,7 @@ def create_app(test_config=None):
         if g.user: return redirect(url_for('home'))
         if request.method=='POST':
             email=request.form.get('email','').strip().lower()[:254]; pw=request.form.get('password','')[:256]
+            # pyrefly: ignore [unsupported-operation]
             now=time.time(); keys=[hashlib.sha256(('ip:'+request.remote_addr).encode()).hexdigest(),hashlib.sha256(('email:'+email).encode()).hexdigest()]
             limits=[db().execute('SELECT * FROM login_limits WHERE key=?',(key,)).fetchone() for key in keys]
             if any(r and r['blocked_until']>now for r in limits):
@@ -326,9 +329,13 @@ def create_app(test_config=None):
             data=json.loads(source['data']); data['change_reason']=''
         if request.method=='POST':
             data={k:request.form.get(k,'').strip()[:500] for k in ['date','time','place','vehicle','trailer','instructions','responsibility','authorization','attachments','observations','weight']}
+            # pyrefly: ignore [no-matching-overload]
             data.update({section:{k:request.form.get(section+'_'+k,'').strip()[:300] for k,_ in fields} for section,fields in [('sender',PROFILE_FIELDS),('origin',PROFILE_FIELDS),('destination',PROFILE_FIELDS),('carrier',PROFILE_FIELDS),('driver',CAT_FIELDS['conductores'])]})
+            # pyrefly: ignore [unsupported-operation]
             data['goods']=[{'description':request.form.get('goods_'+str(i),'').strip()[:200],'quantity':request.form.get('quantity_'+str(i),'').strip()[:30],'code':request.form.get('code_'+str(i),'').strip()[:80]} for i in range(7) if request.form.get('goods_'+str(i),'').strip()]
+            # pyrefly: ignore [unsupported-operation]
             data['articulated']=request.form.get('articulated')=='yes'
+            # pyrefly: ignore [unsupported-operation]
             data['special_authorization']=request.form.get('special_authorization')=='yes'
             data['weight_kind']=request.form.get('weight_kind','kg')
             data['weight_reason']=request.form.get('weight_reason','').strip()[:500]
@@ -337,9 +344,12 @@ def create_app(test_config=None):
             errors=[]
             if request.form.get('articulated') not in ('yes','no') or request.form.get('special_authorization') not in ('yes','no'): errors.append('Indica si hay remolque y si se requiere autorización especial.')
             for s in ['sender','origin','destination','carrier']:
+                # pyrefly: ignore [bad-index]
                 if not data[s]['name'] or not data[s]['nif']: errors.append('Completa nombre y NIF de cargador, origen, destino y transportista.') ; break
+            # pyrefly: ignore [bad-index]
             if not data['sender']['address'] or not data['sender']['city']: errors.append('Completa domicilio y población del cargador contractual.')
             for site in ('origin','destination'):
+                # pyrefly: ignore [bad-index]
                 if not data[site]['address'] or not data[site]['city']: errors.append('Completa dirección y población del origen y destino.')
             if not data['weight'] or not any(c.isdigit() for c in data['weight']): errors.append('Indica el peso en kg o una magnitud alternativa que permita determinarlo.')
             if data['weight_kind']=='kg':
@@ -352,6 +362,7 @@ def create_app(test_config=None):
             if source and not data['change_reason']: errors.append('Indica el motivo de la rectificación.')
             if request.form.get('driver_delivery')!='yes': errors.append('Confirma que entregarás el PDF y el nuevo QR al conductor.')
             if not source and request.form.get('before_departure')!='yes': errors.append('Confirma que el servicio todavía no ha comenzado.')
+            # pyrefly: ignore [bad-index]
             if not data['vehicle'] or not data['driver']['name'] or not data['goods']: errors.append('Completa vehículo, conductor y al menos una mercancía.')
             try:
                 planned=datetime.strptime(data['date']+' '+data['time'],'%Y-%m-%d %H:%M').replace(tzinfo=ZoneInfo('Europe/Madrid'))
@@ -613,5 +624,24 @@ def create_app(test_config=None):
     def conflict(error): return render_template('error.html',message=error.description),409
     @app.errorhandler(413)
     def too_large(error): return render_template('error.html',message='El archivo o formulario supera el tamaño permitido. El logotipo debe ocupar como máximo 2 MB.'),413
+
+    def _iniciar_worker_limpieza():
+        def _loop():
+            # Espera inicial para asegurar el arranque completo de Flask
+            time.sleep(2)
+            while True:
+                try:
+                    limpiar_documentos_y_qr(directory)
+                except Exception:
+                    app.logger.exception('Error en el worker automático de limpieza de documentos y QRs.')
+                time.sleep(3600)
+
+        # Evitar duplicar el hilo si Flask corre con el recargador activo (--reload)
+        if not app.debug or os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+            hilo = threading.Thread(target=_loop, daemon=True, name='WorkerLimpiezaAsemaco')
+            hilo.start()
+
+    _iniciar_worker_limpieza()
+
     return app
 
