@@ -1,4 +1,4 @@
-import os, json, sqlite3, secrets, hashlib, time, io, re
+import os, json, sqlite3, secrets, hashlib, time, io, re, ssl  # <--- Añade 'ssl' aquí
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -13,8 +13,13 @@ from pdf_document import make_pdf
 from qr_image import make_qr_png
 from zipfile import ZipFile, ZIP_DEFLATED
 from retention import expiry_after, utc_now, purge_expired, remove_documents
+import smtplib
+from email.message import EmailMessage
+from dotenv import load_dotenv
 
+load_dotenv()
 ROOT = Path(__file__).resolve().parent
+PROFILE_FIELDS = [...]
 PROFILE_FIELDS = [('name','Razón social'),('nif','NIF / CIF'),('address','Dirección'),('city','Código postal y población'),('country','País'),('phone','Teléfono'),('email','Correo electrónico')]
 CAT_FIELDS = {
  'cargadores': PROFILE_FIELDS,
@@ -500,6 +505,64 @@ def create_app(test_config=None):
         users=db().execute("SELECT id,email,active,profile FROM users WHERE role='member' ORDER BY id DESC").fetchall()
         return render_template('admin.html',members=[dict(r,info=json.loads(r['profile'])) for r in users])
 
+# ==========================================
+# FUNCIÓN DE PRUEBA PARA ENVIAR CORREOS
+# ==========================================
+
+    def enviar_correo_recuperacion(destinatario):
+        print("Remitente:", repr(os.getenv("MAIL_USERNAME")))
+        print(
+            "Contraseña configurada:",
+            bool(os.getenv("MAIL_PASSWORD"))
+        )
+        # Leemos las credenciales desde el entorno
+        remitente = (os.getenv("MAIL_USERNAME") or "").strip()
+        password = (
+            (os.getenv("MAIL_PASSWORD") or "")
+            .strip()
+            .replace(" ", "")
+        )
+
+        msg = EmailMessage()
+        msg["Subject"] = "Recuperar contraseña"
+        msg["From"] = remitente
+        msg["To"] = destinatario
+        msg.set_content("HOLA practicas")
+
+        contexto_ssl = ssl.create_default_context()
+
+        with smtplib.SMTP_SSL(
+            "smtp.gmail.com",
+            465,
+            timeout=20,
+            context=contexto_ssl
+        ) as smtp:
+            #smtp.starttls()
+            smtp.set_debuglevel(1)
+            smtp.login(remitente, password)
+            smtp.send_message(msg)
+    
+    @app.get("/test-correo")
+    def test_correo():
+        try:
+            enviar_correo_recuperacion(
+                "practicaslogik@gmail.com"
+            )
+
+            return "¡Correo enviado con éxito!", 200
+
+        except Exception as e:
+            app.logger.exception(
+                "Error al ejecutar la prueba de correo SMTP"
+            )
+
+            return (
+                f"Error al enviar el correo: "
+                f"{type(e).__name__}: {e}. "
+                "Consulta la consola de Flask para ver "
+                "el traceback completo."
+            ), 500
+
     @app.cli.command('create-admin')
     @click.option('--email',prompt=True)
     @click.option('--password',prompt=True,hide_input=True,confirmation_prompt=True)
@@ -521,3 +584,5 @@ def create_app(test_config=None):
     @app.errorhandler(413)
     def too_large(error): return render_template('error.html',message='El archivo o formulario supera el tamaño permitido. El logotipo debe ocupar como máximo 2 MB.'),413
     return app
+
+
