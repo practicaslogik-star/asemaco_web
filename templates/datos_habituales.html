@@ -1,0 +1,99 @@
+{% extends 'base.html' %}{% block content %}<div class="page-heading">
+    <div>
+        <div class="eyebrow">REUTILIZA TU INFORMACIÓN</div>
+        <h1>Datos habituales</h1>
+        <p>Guarda tus contactos y vehículos para seleccionarlos al preparar un documento.</p>
+    </div>
+</div>
+<nav class="tabs">{% for k,label in cat_names.items() %}<a class="{{ 'selected' if k==kind }}"
+        href="/datos_habituales?kind={{ k }}">{{ label }}</a>{% endfor %}</nav>
+<div class="split">
+
+    <section class="panel">
+        <h2>Registros guardados</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+            {% for e in entries %}
+            <article class="saved-record"
+                style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
+                <div>
+                    <h3 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1.1rem; color: #333;">{{ e.info.name }}
+                    </h3>
+                    <p style="margin: 0 0 0.25rem; font-size: 0.9rem; color: #666;">{{ e.info.get('nif') or
+                        e.info.get('trailer','') }}</p>
+                    <p style="margin: 0; font-size: 0.9rem; color: #666;">{{ e.info.get('address','') }} {{
+                        e.info.get('city','') }}</p>
+                    {% if user.role == 'admin' %}
+                    <p style="margin: 0.5rem 0 0; font-size: 0.8rem; color: #888;">Propietario: {{ e.info.get('email','') }}</p>
+                    {% endif %}
+                </div>
+                <div
+                    style="display: flex; gap: 0.5rem; margin-top: 1rem; border-top: 1px solid #f0f0f0; padding-top: 0.75rem;">
+                    <!-- boton para ediatr -->
+                    <button type="button" class="text-button btn-edit" data-id="{{ e.id }}"
+                        data-info='{{ e.info | tojson }}'
+                        style="background: none; border: none; padding: 0; cursor: pointer; font-size: 0.9rem; color: #0066cc;">
+                        Modificar
+                    </button>
+
+                    <!-- Boton para eliminar -->
+                    <button type="button" class="text-button danger btn-delete" data-id="{{ e.id }}"
+                        data-name="{{ e.info.name }}"
+                        style="background: none; border: none; padding: 0; cursor: pointer; font-size: 0.9rem; color: #d32f2f;">
+                        Eliminar
+                    </button>
+                </div>
+
+            </article>
+            {% else %}
+            <p class="muted" style="grid-column: 1 / -1;">Todavía no hay registros en esta categoría.</p>
+            {% endfor %}
+        </div>
+    </section>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN       -->
+<!-- ========================================== -->
+<dialog id="delete-modal" class="custom-modal">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; color: #d32f2f;">¿Eliminar registro?</h3>
+        <p>¿Estás seguro de que deseas eliminar <strong id="delete-record-name"></strong> de tus datos habituales?</p>
+        <form method="post" id="delete-form">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="action" value="delete">
+            <input type="hidden" name="id" id="delete-record-id" value="">
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="button" class="secondary" id="cancel-delete-btn">No, cancelar</button>
+                <button type="submit" class="primary" style="background: #d32f2f; border-color: #d32f2f;">Sí,
+                    eliminar</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+
+<!-- MODAL DE MODIFICACIÓN DE DATOS     -->
+<dialog id="edit-modal" class="custom-modal">
+    <div class="modal-content">
+        <h3 style="margin-top: 0; margin-bottom: 1rem; color: #333;">Modificar {{ cat_names[kind]|lower }}</h3>
+        <form method="post" id="edit-form">
+            <input type="hidden" name="csrf" value="{{ csrf }}">
+            <input type="hidden" name="action" value="edit">
+            <input type="hidden" name="id" id="edit-record-id" value="">
+
+            <div class="form-grid" style="display: flex; flex-direction: column; gap: 0.75rem;">
+                {% for key, label in cat_fields[kind] %}
+                <label style="display: flex; flex-direction: column; font-size: 0.9rem; font-weight: 500; color: #555;">
+                    {{ label }}
+                    <input name="{{ key }}" id="edit-field-{{ key }}" maxlength="300" {{ 'required' if key=='name' }}
+                        style="margin-top: 0.25rem; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; font-size: 0.95rem;">
+                </label>
+                {% endfor %}
+            </div>
+            <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+                <button type="button" class="secondary" id="cancel-edit-btn">Cancelar</button>
+                <button type="submit" class="primary">Guardar cambios</button>
+            </div>
+        </form>
+    </div>
+</dialog>
+{% endblock %}

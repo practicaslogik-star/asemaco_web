@@ -1,1 +1,41 @@
-{% extends 'base.html' %}{% block content %}<div class="page-heading"><div><div class="eyebrow">ADMINISTRACIÓN ASEMACO</div><h1>Gestionar socios</h1><p>Crea cuentas y gestiona sus accesos. Cada socio mantiene su documentación privada.</p></div></div><section class="panel"><h2>Crear cuenta de socio</h2><form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="create"><div class="form-grid three"><label>Empresa<input name="name" required maxlength="300"></label><label>Correo de acceso<input name="email" type="email" required maxlength="254"></label><label>Contraseña temporal<input name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128" required></label></div><button class="primary">Crear socio</button><p class="help">Facilita el acceso al socio por tu canal habitual. El programa no envía correos. El primer acceso exige cambiar la contraseña.</p></form></section><section class="panel"><h2>Cuentas de socios</h2>{% for m in members %}<article class="member"><div><h3>{{ m.info.get('name','') }}</h3><p>{{ m.email }}</p><span class="badge {{ 'off' if not m.active }}">{{ 'Activa' if m.active else 'Desactivada' }}</span></div><div class="member-actions"><form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="toggle"><input type="hidden" name="id" value="{{ m.id }}"><button class="secondary" data-confirm="¿Cambiar el estado de esta cuenta? Desactivarla también bloquea sus enlaces QR.">{{ 'Desactivar' if m.active else 'Activar' }}</button></form><details><summary>Restablecer contraseña</summary><form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action" value="reset"><input type="hidden" name="id" value="{{ m.id }}"><label>Nueva contraseña temporal<input name="password" type="password" minlength="12" maxlength="128" required></label><button class="secondary">Restablecer</button></form></details></div></article>{% else %}<p class="muted">Todavía no hay cuentas de socios.</p>{% endfor %}</section>{% endblock %}
+{% extends 'base.html' %}{% block content %}<div class="page-heading">
+    <div>
+        <div class="eyebrow">ADMINISTRACIÓN ASEMACO</div>
+        <h1>Gestionar socios</h1>
+        <p>Crea cuentas y gestiona sus accesos. Cada socio mantiene su documentación privada.</p>
+    </div>
+</div>
+<section class="panel">
+    <h2>Crear cuenta de socio</h2>
+    <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action"
+            value="create">
+        <div class="form-grid three"><label>Empresa<input name="name" required maxlength="300"></label><label>Correo de
+                acceso<input name="email" type="email" required maxlength="254"></label><label>Contraseña temporal<input
+                    name="password" type="password" autocomplete="new-password" minlength="12" maxlength="128"
+                    required></label></div><button class="primary">Crear socio</button>
+        <p class="help">Facilita el acceso al socio por tu canal habitual. El programa no envía correos. El primer
+            acceso exige cambiar la contraseña.</p>
+    </form>
+</section>
+<section class="panel">
+    <h2>Cuentas de socios</h2>{% for m in members %}<article class="member">
+        <div>
+            <h3>{{ m.info.get('name','') }}</h3>
+            <p>{{ m.email }}</p><span class="badge {{ 'off' if not m.active }}">{{ 'Activa' if m.active else
+                'Desactivada' }}</span>
+        </div>
+        <div class="member-actions">
+            <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action"
+                    value="toggle"><input type="hidden" name="id" value="{{ m.id }}"><button class="secondary"
+                    data-confirm="¿Cambiar el estado de esta cuenta? Desactivarla también bloquea sus enlaces QR.">{{
+                    'Desactivar' if m.active else 'Activar' }}</button></form>
+            <details>
+                <summary>Restablecer contraseña</summary>
+                <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden"
+                        name="action" value="reset"><input type="hidden" name="id" value="{{ m.id }}"><label>Nueva
+                        contraseña temporal<input name="password" type="password" minlength="12" maxlength="128"
+                            required></label><button class="secondary">Restablecer</button></form>
+            </details>
+        </div>
+    </article>{% else %}<p class="muted">Todavía no hay cuentas de socios.</p>{% endfor %}
+</section>{% endblock %}

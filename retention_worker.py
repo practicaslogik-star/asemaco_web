@@ -13,7 +13,7 @@ if __name__ == '__main__':
     directory = Path(os.environ.get('DATA_DIR',str(Path(__file__).parent/'data')))
     logging.basicConfig(level=logging.INFO)
     while True:
-        database = directory/'asemaco.sqlite3'
+        database = directory/'asemaco_new.sqlite3'
         try:
             if database.exists():
                 count=purge_expired(database,directory)

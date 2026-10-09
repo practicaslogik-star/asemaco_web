@@ -180,12 +180,13 @@ class Tests(unittest.TestCase):
     self.assertEqual(self.post(self.a,f'/documents/{id}/delete',confirm_delete='yes').status_code,302)
   self.assertTrue((Path(self.tmp.name)/'pdfs'/f'{token}.pdf').exists());self.assertEqual(self.public.get('/d/'+token).status_code,200)
  def test_legacy_retention_migration(self):
+  
   import json
   from pathlib import Path
   from app import SCHEMA
   from retention import expiry_after
   with tempfile.TemporaryDirectory() as directory:
-   database=Path(directory)/'asemaco.sqlite3'
+   database=Path(directory)/'asemaco_new.sqlite3'
    with sqlite3.connect(database) as c:
     c.executescript(SCHEMA);c.execute('INSERT INTO users(email,password) VALUES(?,?)',('legacy@test.es','test'))
     c.execute('INSERT INTO documents(user_id,number,token,created,data) VALUES(?,?,?,?,?)',(1,1,'a'*43,'2026-01-31T12:00:00+01:00','{}'))

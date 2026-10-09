@@ -21,6 +21,14 @@ load_dotenv()
 ROOT = Path(__file__).resolve().parent
 PROFILE_FIELDS = [...]
 PROFILE_FIELDS = [('name','Razón social'),('nif','NIF / CIF'),('address','Dirección'),('city','Código postal y población'),('country','País'),('phone','Teléfono'),('email','Correo electrónico')]
+from datetime import datetime
+from zoneinfo import ZoneInfo
+
+
+ROOT = Path(__file__).resolve().parent
+
+PROFILE_FIELDS = [('name','Razón social'),('nif','NIF / CIF'),('address','Dirección'),('city','Código postal y población'),('country','País'),('phone','Teléfono'),('email','Correo electrónico')]
+
 CAT_FIELDS = {
  'cargadores': PROFILE_FIELDS,
  'origenes': PROFILE_FIELDS,
@@ -55,7 +63,7 @@ def create_app(test_config=None):
     directory=Path(app.config['DATA_DIR']); directory.mkdir(parents=True,exist_ok=True)
     (directory/'pdfs').mkdir(exist_ok=True)
     (directory/'logos').mkdir(exist_ok=True)
-    app.config['DATABASE']=str(directory/'asemaco.sqlite3')
+    app.config['DATABASE']=str(directory/'asemaco_new.sqlite3')
     with sqlite3.connect(app.config['DATABASE']) as con:
         con.execute('PRAGMA journal_mode=WAL'); con.execute('PRAGMA foreign_keys=ON'); con.executescript(SCHEMA)
         con.execute('BEGIN IMMEDIATE')
@@ -74,6 +82,7 @@ def create_app(test_config=None):
         return g.db
 
     @app.teardown_appcontext
+    
     def close_db(error):
         con=g.pop('db',None)
         if con: con.close()
@@ -134,6 +143,16 @@ def create_app(test_config=None):
 
     dummy_hash=generate_password_hash(secrets.token_urlsafe(24))
 
+    # ruta para la pagina de forgot paswword
+    @app.route('/forgot-password', methods=['GET', 'POST'])
+    def forgot_password():
+        if request.method == 'POST':
+            
+            flash('Si el correo existe, se han enviado las instrucciones a tu bandeja.', 'success')
+            return redirect(url_for('login'))
+        # redirigir a la pagina de olvidar la contraseña 
+        return render_template('forgot_password.html')
+
     @app.route('/login',methods=['GET','POST'])
     def login():
         if g.user: return redirect(url_for('home'))
@@ -174,6 +193,11 @@ def create_app(test_config=None):
     @app.get('/')
     @login_required
     def home():
+
+        row=db().execute('SELECT * FROM documents ' \
+        'WHERE user_id=? AND (expires_at IS NULL OR expires_at>?) ' \
+        'ORDER BY number DESC LIMIT 1',(g.user['id'],utc_now())).fetchone()
+        #llamar funcion para borrar los docuemntos y pdf asociados al entrar en la pagina 
         docs=db().execute('SELECT * FROM documents WHERE user_id=? AND (expires_at IS NULL OR expires_at>?) ORDER BY number DESC',(g.user['id'],utc_now())).fetchall()
         return render_template('home.html',docs=[dict(r,info=json.loads(r['data'])) for r in docs],profile=json.loads(g.user['profile']),count_entries=db().execute('SELECT count(*) FROM entries WHERE user_id=?',(g.user['id'],)).fetchone()[0])
 
@@ -245,39 +269,67 @@ def create_app(test_config=None):
         if not path: abort(404)
         return send_file(path,mimetype='image/jpeg',conditional=False)
 
-    @app.route('/catalogs',methods=['GET','POST'])
+    @app.route('/datos_habituales',methods=['GET','POST'])
     @login_required
-    def catalogs():
+    def datos_habituales():
         kind=request.args.get('kind','cargadores')
         if kind not in CAT_FIELDS: abort(404)
         if request.method=='POST':
-            if request.form.get('action')=='delete':
-                db().execute('DELETE FROM entries WHERE id=? AND user_id=? AND kind=?',(request.form.get('id'),g.user['id'],kind)); db().commit(); flash('Registro eliminado. Los documentos generados se conservan.','success')
+            action = request.form.get('action')
+            if action == 'delete':
+                if g.user['role'] == 'admin':
+                    db().execute('DELETE FROM entries WHERE id=? AND kind=?',(request.form.get('id'),kind))
+                else:
+                    db().execute('DELETE FROM entries WHERE id=? AND user_id=? AND kind=?',(request.form.get('id'),g.user['id'],kind))
+                db().commit()
+                flash('Registro eliminado. Los documentos generados se conservan.','success')
+            elif action == 'edit':
+                data = clean(CAT_FIELDS[kind])
+                if not data.get('name'):
+                    flash('Completa el nombre o matrícula.', 'error')
+                else:
+                    if g.user['role'] == 'admin':
+                        db().execute('UPDATE entries SET data=? WHERE id=? AND kind=?', (json.dumps(data, ensure_ascii=False), request.form.get('id'), kind))
+                    else:
+                        db().execute('UPDATE entries SET data=? WHERE id=? AND user_id=? AND kind=?', (json.dumps(data, ensure_ascii=False), request.form.get('id'), g.user['id'], kind))
+                    db().commit()
+                    flash('Registro actualizado correctamente.', 'success')
             else:
                 data=clean(CAT_FIELDS[kind])
                 if not data['name']: flash('Completa el nombre o matrícula.','error')
                 elif db().execute('SELECT count(*) FROM entries WHERE user_id=?',(g.user['id'],)).fetchone()[0]>=2000: flash('Se ha alcanzado el límite de registros.','error')
                 else:
                     db().execute('INSERT INTO entries(user_id,kind,data) VALUES(?,?,?)',(g.user['id'],kind,json.dumps(data,ensure_ascii=False))); db().commit(); flash('Registro guardado.','success')
-            return redirect(url_for('catalogs',kind=kind))
-        rows=db().execute('SELECT * FROM entries WHERE user_id=? AND kind=? ORDER BY id DESC',(g.user['id'],kind)).fetchall()
-        return render_template('catalogs.html',kind=kind,entries=[dict(r,info=json.loads(r['data'])) for r in rows])
+            return redirect(url_for('datos_habituales',kind=kind))
+        
+        if g.user['role'] == 'admin':
+            rows=db().execute('SELECT * FROM entries WHERE kind=? ORDER BY id DESC',(kind,)).fetchall()
+        else:
+            rows=db().execute('SELECT * FROM entries WHERE user_id=? AND kind=? ORDER BY id DESC',(g.user['id'],kind)).fetchall()
+        return render_template('datos_habituales.html',kind=kind,entries=[dict(r,info=json.loads(r['data'])) for r in rows])
 
+    #
     @app.route('/documents/<int:source_id>/correct',methods=['GET','POST'])
     @app.route('/documents/new',methods=['GET','POST'])
     @login_required
     def new_document(source_id=None):
-        source=None
-        if source_id:
-            source=db().execute('SELECT * FROM documents WHERE id=? AND user_id=?',(source_id,g.user['id'])).fetchone()
-            if not source: abort(404)
-            latest=db().execute('SELECT max(id) FROM documents WHERE root_id=?',(source['root_id'],)).fetchone()[0]
-            if source['finished_at'] or latest!=source_id: abort(409,'Rectifica la última versión de un servicio sin finalizar.')
-        p=json.loads(g.user['profile']); rows=db().execute('SELECT * FROM entries WHERE user_id=?',(g.user['id'],)).fetchall()
-        catalog={k:[dict(id=r['id'],**json.loads(r['data'])) for r in rows if r['kind']==k] for k in CAT_FIELDS}
-        now=datetime.now(ZoneInfo('Europe/Madrid'))
-        planned_default=now+timedelta(minutes=30)
-        data={'date':planned_default.strftime('%Y-%m-%d'),'time':planned_default.strftime('%H:%M'),'place':p.get('city',''),'carrier':p,'goods':[]}
+        try:
+            source=None
+            if source_id:
+                source=db().execute('SELECT * FROM documents WHERE id=? AND user_id=?',(source_id,g.user['id'])).fetchone()
+                if not source: abort(404)
+                latest=db().execute('SELECT max(id) FROM documents WHERE root_id=?',(source['root_id'],)).fetchone()[0]
+                if source['finished_at'] or latest!=source_id: abort(409,'Rectifica la última versión de un servicio sin finalizar.')
+            p=json.loads(g.user['profile']); rows=db().execute('SELECT * FROM entries WHERE user_id=?',(g.user['id'],)).fetchall()
+            catalog={k:[dict(id=r['id'],**json.loads(r['data'])) for r in rows if r['kind']==k] for k in CAT_FIELDS}
+            now=datetime.now(ZoneInfo('Europe/Madrid'))
+            planned_default=now+timedelta(minutes=30)
+            data={'date':planned_default.strftime('%Y-%m-%d'),'time':planned_default.strftime('%H:%M'),'place':p.get('city',''),'carrier':p,'goods':[]}
+        except Exception as e:
+            import traceback
+            with open('scratch_error.txt', 'w') as f:
+                f.write(traceback.format_exc())
+            raise
         if source:
             data=json.loads(source['data']); data['change_reason']=''
         if request.method=='POST':
@@ -289,6 +341,7 @@ def create_app(test_config=None):
             data['weight_kind']=request.form.get('weight_kind','kg')
             data['weight_reason']=request.form.get('weight_reason','').strip()[:500]
             data['change_reason']=request.form.get('change_reason','').strip()[:500]
+            
             errors=[]
             if request.form.get('articulated') not in ('yes','no') or request.form.get('special_authorization') not in ('yes','no'): errors.append('Indica si hay remolque y si se requiere autorización especial.')
             for s in ['sender','origin','destination','carrier']:
@@ -342,13 +395,48 @@ def create_app(test_config=None):
                     root=source['root_id'] if source else ident
                     cur=con.execute('INSERT INTO documents(id,user_id,number,token,created,data,parent_id,root_id,pdf_sha256,legacy) VALUES(?,?,?,?,?,?,?,?,?,0)',(ident,g.user['id'],number,token,stamp,json.dumps(data,ensure_ascii=False),source_id,root,hashlib.sha256(pdf).hexdigest()))
                     event(ident,'rectificacion' if source else 'creacion',json.dumps({'parent_id':source_id,'motivo':data['change_reason']},ensure_ascii=False))
-                    con.execute('UPDATE users SET next_number=next_number+1 WHERE id=?',(g.user['id'],)); con.commit()
+                    con.execute('UPDATE users SET next_number=next_number+1 WHERE id=?',(g.user['id'],))
+                    
+                    if request.form.get('save_all_data') == '1':
+                        existing_rows = con.execute('SELECT kind, data FROM entries WHERE user_id=?', (g.user['id'],)).fetchall()
+                        saved_names = {k: set() for k in ['cargadores', 'origenes', 'destinos', 'transportistas', 'vehiculos', 'conductores']}
+                        for r in existing_rows:
+                            try: saved_names[r['kind']].add(json.loads(r['data']).get('name', '').strip().lower())
+                            except: pass
+
+                        def save_if_new(kind, item_data):
+                            if not item_data or not item_data.get('name'): return
+                            if item_data['name'].strip().lower() not in saved_names.get(kind, set()):
+                                con.execute('INSERT INTO entries(user_id, kind, data) VALUES(?, ?, ?)', (g.user['id'], kind, json.dumps(item_data, ensure_ascii=False)))
+                                saved_names[kind].add(item_data['name'].strip().lower())
+
+                        for section, kind in [('sender', 'cargadores'), ('origin', 'origenes'), ('destination', 'destinos'), ('carrier', 'transportistas')]:
+                            save_if_new(kind, data.get(section, {}))
+                        
+                        if data.get('vehicle'):
+                            save_if_new('vehiculos', {'name': data['vehicle'], 'trailer': data.get('trailer', '')})
+                            
+                        save_if_new('conductores', data.get('driver', {}))
+
+                    if request.form.get('hide_save_warning') == '1':
+                        p = json.loads(g.user['profile'])
+                        if not p.get('hide_save_warning'):
+                            p['hide_save_warning'] = True
+                            con.execute('UPDATE users SET profile=? WHERE id=?', (json.dumps(p, ensure_ascii=False), g.user['id']))
+
+                    con.commit()
                 except Exception:
                     con.rollback()
                     (directory/'pdfs'/f'{token}.pdf').unlink(missing_ok=True)
                     app.logger.exception('Error generando documento'); flash('No se pudo guardar el documento. Tus datos siguen en el formulario.','error')
                 else: return redirect(url_for('document',doc_id=cur.lastrowid))
-        return render_template('new.html',data=data,catalog=catalog,next_number=g.user['next_number'],source=source)
+        try:
+            return render_template('new.html',data=data,catalog=catalog,next_number=g.user['next_number'],source=source)
+        except Exception as e:
+            import traceback
+            with open('scratch_error_render.txt', 'w') as f:
+                f.write(traceback.format_exc())
+            raise
 
     @app.get('/documents/<int:doc_id>')
     @login_required
@@ -358,7 +446,18 @@ def create_app(test_config=None):
         info=json.loads(row['data'])
         versions=db().execute('SELECT * FROM documents WHERE root_id=? AND user_id=? ORDER BY id',(row['root_id'],g.user['id'])).fetchall()
         events=db().execute('SELECT * FROM deca_events WHERE document_id IN (SELECT id FROM documents WHERE root_id=?) ORDER BY id',(row['root_id'],)).fetchall()
-        return render_template('document.html',doc=row,info=info,public_url=document_url(row),versions=versions,events=events,can_delete=bool(row['delete_after'] and row['delete_after']<=utc_now()),finished_default=datetime.now(ZoneInfo('Europe/Madrid')).strftime('%Y-%m-%dT%H:%M:%S'))
+        #comprobar
+      
+
+        return render_template(
+            'document.html',
+            doc=row,info=info,
+            public_url=document_url(row),
+            versions=versions,
+            events=events,
+            qr_activo=not row['token'].startswith('caducado_'),
+            can_delete=bool(row['delete_after'] and row['delete_after']<=utc_now()),
+            finished_default=datetime.now(ZoneInfo('Europe/Madrid')).strftime('%Y-%m-%dT%H:%M:%S'))
 
     def document_url(row):
         return json.loads(row['data']).get('_public_url') or app.config['PUBLIC_BASE_URL']+'/d/'+row['token']
@@ -409,6 +508,8 @@ def create_app(test_config=None):
         if len(token)!=43: abort(404)
         row=db().execute('SELECT d.* FROM documents d JOIN users u ON u.id=d.user_id WHERE d.token=? AND d.revoked=0 AND (d.expires_at IS NULL OR d.expires_at>?)',(token,utc_now())).fetchone()
         if not row: abort(404)
+
+        
         return pdf_response(row)
 
     def owned(doc_id):
@@ -584,5 +685,4 @@ def create_app(test_config=None):
     @app.errorhandler(413)
     def too_large(error): return render_template('error.html',message='El archivo o formulario supera el tamaño permitido. El logotipo debe ocupar como máximo 2 MB.'),413
     return app
-
 

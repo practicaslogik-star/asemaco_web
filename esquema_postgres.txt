@@ -1,0 +1,45 @@
+ESQUEMA DE BASE DE DATOS - PLANTEAMIENTO POSTGRESQL
+===================================================
+
+1. Tabla: empresas (Núcleo de los datos)
+----------------------------------------
+- id: SERIAL (Clave principal)
+- razon_social: VARCHAR(300)
+- nif: VARCHAR(50)
+- direccion: VARCHAR(300)
+- poblacion: VARCHAR(200) (Incluye código postal)
+- pais: VARCHAR(100)
+- telefono: VARCHAR(50)
+- correo: VARCHAR(254)
+- logotipo: VARCHAR(255) (Guarda el nombre del archivo, ej: mi_logo.jpg)
+
+
+2. Tabla: usuarios (Accesos y permisos)
+----------------------------------------
+- id: SERIAL (Clave principal)
+- empresa_id: INTEGER (Apunta al ID de la empresa. Si está vacío/nulo, es el Super Admin)
+- correo: VARCHAR(254) (Único, para iniciar sesión)
+- contrasena: VARCHAR(256) (Contraseña cifrada)
+- rol: VARCHAR(20) (Ej: 'superadmin' o 'admin')
+- activo: BOOLEAN (Por defecto TRUE)
+- debe_cambiar: BOOLEAN (Por defecto TRUE, obliga a cambiar clave al entrar)
+
+
+3. Tabla: documents (Control de DeCAs)
+----------------------------------------
+- id: SERIAL (Clave principal)
+- user_id: INTEGER (Apunta al admin que lo creó)
+- number: INTEGER (Número de documento)
+- token: VARCHAR(100) (Único, para el enlace del QR)
+- created: TIMESTAMPTZ (Fecha de creación con zona horaria)
+- data: JSONB (Toda la masa de datos optimizada en JSON)
+- pdf_sha256: VARCHAR(64) (Firma del PDF)
+- revoked: BOOLEAN (Por defecto FALSE)
+
+
+4. Tabla: entries (Datos habituales / catálogos)
+------------------------------------------------
+- id: SERIAL (Clave principal)
+- user_id: INTEGER (Apunta al admin dueño de los datos)
+- kind: VARCHAR(50) (Ej: 'conductores', 'vehiculos', 'cargadores')
+- data: JSONB (Datos en formato JSON)
