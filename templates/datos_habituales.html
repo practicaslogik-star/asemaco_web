@@ -7,49 +7,84 @@
 </div>
 <nav class="tabs">{% for k,label in cat_names.items() %}<a class="{{ 'selected' if k==kind }}"
         href="/datos_habituales?kind={{ k }}">{{ label }}</a>{% endfor %}</nav>
-<div class="split">
 
-    <section class="panel">
+
+<section class="panel">
+    <div class="section-heading">
         <h2>Registros guardados</h2>
-        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
-            {% for e in entries %}
-            <article class="saved-record"
-                style="border: 1px solid #e0e0e0; border-radius: 8px; padding: 1rem; display: flex; flex-direction: column; justify-content: space-between; background: #fff; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">
-                <div>
-                    <h3 style="margin-top: 0; margin-bottom: 0.5rem; font-size: 1.1rem; color: #333;">{{ e.info.name }}
-                    </h3>
-                    <p style="margin: 0 0 0.25rem; font-size: 0.9rem; color: #666;">{{ e.info.get('nif') or
-                        e.info.get('trailer','') }}</p>
-                    <p style="margin: 0; font-size: 0.9rem; color: #666;">{{ e.info.get('address','') }} {{
-                        e.info.get('city','') }}</p>
-                    {% if user.role == 'admin' %}
-                    <p style="margin: 0.5rem 0 0; font-size: 0.8rem; color: #888;">Propietario: {{ e.info.get('email','') }}</p>
-                    {% endif %}
-                </div>
-                <div
-                    style="display: flex; gap: 0.5rem; margin-top: 1rem; border-top: 1px solid #f0f0f0; padding-top: 0.75rem;">
-                    <!-- boton para ediatr -->
-                    <button type="button" class="text-button btn-edit" data-id="{{ e.id }}"
-                        data-info='{{ e.info | tojson }}'
-                        style="background: none; border: none; padding: 0; cursor: pointer; font-size: 0.9rem; color: #0066cc;">
-                        Modificar
-                    </button>
-
-                    <!-- Boton para eliminar -->
-                    <button type="button" class="text-button danger btn-delete" data-id="{{ e.id }}"
-                        data-name="{{ e.info.name }}"
-                        style="background: none; border: none; padding: 0; cursor: pointer; font-size: 0.9rem; color: #d32f2f;">
-                        Eliminar
-                    </button>
-                </div>
-
-            </article>
-            {% else %}
-            <p class="muted" style="grid-column: 1 / -1;">Todavía no hay registros en esta categoría.</p>
-            {% endfor %}
+        <div class="search-wrapper">
+            <i class='bx bx-search search-icon'></i>
+            <input type="search" id="record-search" placeholder="Buscar por nombre, CIF, dirección..." autocomplete="off">
+            <button type="button" id="clear-search-btn" class="clear-search" style="display: none;" title="Limpiar búsqueda">
+                <i class='bx bx-x'></i>
+            </button>
         </div>
-    </section>
-</div>
+    </div>
+
+    <div class="saved-records-grid">
+        {% for e in entries %}
+        <article class="saved-card">
+            <div class="saved-card-header">
+                <h3 class="saved-card-title">{{ e.info.name }}</h3>
+                {% if user.role == 'admin' %}
+                <span class="saved-card-owner">Propietario: {{ e.user_id }}</span>
+                {% endif %}
+            </div>
+
+            <div class="saved-card-body">
+                {% if kind == 'vehiculos' and e.info.get('trailer') %}
+                <div class="saved-card-row">
+                    <i class='bx bx-car'></i>
+                    <span>Remolque: {{ e.info.get('trailer') }}</span>
+                </div>
+                {% elif e.info.get('nif') %}
+                <div class="saved-card-row">
+                    <i class='bx bx-id-card'></i>
+                    <span>{{ e.info.get('nif') }}</span>
+                </div>
+                {% endif %}
+
+                {% set address_line = (e.info.get('address','') ~ ' ' ~ e.info.get('city','')) | trim %}
+                {% if address_line %}
+                <div class="saved-card-row">
+                    <i class='bx bx-map-pin'></i>
+                    <span>{{ address_line }}</span>
+                </div>
+                {% endif %}
+
+                {% if e.info.get('phone') %}
+                <div class="saved-card-row">
+                    <i class='bx bx-phone'></i>
+                    <span>{{ e.info.get('phone') }}</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="saved-card-actions">
+                <button type="button" class="btn-action btn-edit" data-id="{{ e.id }}" data-info='{{ e.info | tojson }}'>
+                    <i class='bx bx-edit-alt'></i> Modificar
+                </button>
+                <button type="button" class="btn-action btn-delete" data-id="{{ e.id }}" data-name="{{ e.info.name }}">
+                    <i class='bx bx-trash'></i> Eliminar
+                </button>
+            </div>
+        </article>
+        {% else %}
+        <p class="muted" style="grid-column: 1 / -1;">Todavía no hay registros en esta categoría.</p>
+        {% endfor %}
+
+        <div id="no-search-results" class="no-search-results" style="display: none; grid-column: 1 / -1;">
+            <i class='bx bx-search-alt'></i>
+            <p>No se encontraron registros que coincidan con "<strong></strong>".</p>
+            <button type="button" class="btn-action btn-edit" id="reset-search-btn">Restablecer búsqueda</button>
+        </div>
+    </div>
+
+    <div class="pagination-container" id="pagination-container" style="display: none;">
+        <span class="pagination-info" id="pagination-info"></span>
+        <div class="pagination-controls" id="pagination-controls"></div>
+    </div>
+</section>
 
 <!-- ========================================== -->
 <!-- MODAL DE CONFIRMACIÓN DE ELIMINACIÓN       -->
