@@ -18,24 +18,85 @@
     </form>
 </section>
 <section class="panel">
-    <h2>Cuentas de socios</h2>{% for m in members %}<article class="member">
-        <div>
-            <h3>{{ m.info.get('name','') }}</h3>
-            <p>{{ m.email }}</p><span class="badge {{ 'off' if not m.active }}">{{ 'Activa' if m.active else
-                'Desactivada' }}</span>
+    <div class="section-heading">
+        <h2>Cuentas de socios</h2>
+        <div class="search-wrapper">
+            <i class='bx bx-search search-icon'></i>
+            <input type="search" id="member-search" placeholder="Buscar por empresa o correo..." autocomplete="off">
+            <button type="button" id="clear-member-search-btn" class="clear-search" style="display: none;" title="Limpiar búsqueda">
+                <i class='bx bx-x'></i>
+            </button>
         </div>
-        <div class="member-actions">
-            <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="action"
-                    value="toggle"><input type="hidden" name="id" value="{{ m.id }}"><button class="secondary"
-                    data-confirm="¿Cambiar el estado de esta cuenta? Desactivarla también bloquea sus enlaces QR.">{{
-                    'Desactivar' if m.active else 'Activar' }}</button></form>
-            <details>
-                <summary>Restablecer contraseña</summary>
-                <form method="post"><input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden"
-                        name="action" value="reset"><input type="hidden" name="id" value="{{ m.id }}"><label>Nueva
-                        contraseña temporal<input name="password" type="password" minlength="12" maxlength="128"
-                            required></label><button class="secondary">Restablecer</button></form>
-            </details>
+    </div>
+
+    <div class="members-grid">
+        {% for m in members %}
+        <article class="member-card">
+            <div class="member-card-header">
+                <div class="member-card-info">
+                    <h3 class="member-card-title">{{ m.info.get('name','') or 'Sin nombre de empresa' }}</h3>
+                    <div class="member-card-email">
+                        <i class='bx bx-envelope'></i>
+                        <span>{{ m.email }}</span>
+                    </div>
+                </div>
+                <span class="badge {{ 'off' if not m.active }}">{{ 'Activa' if m.active else 'Desactivada' }}</span>
+            </div>
+
+            <div class="member-card-actions">
+                <form method="post" style="margin: 0;">
+                    <input type="hidden" name="csrf" value="{{ csrf }}">
+                    <input type="hidden" name="action" value="toggle">
+                    <input type="hidden" name="id" value="{{ m.id }}">
+                    {% if m.active %}
+                    <button type="submit" class="btn-action btn-toggle-off"
+                        data-confirm="¿Cambiar el estado de esta cuenta? Desactivarla también bloquea sus enlaces QR.">
+                        <i class='bx bx-user-x'></i> Desactivar
+                    </button>
+                    {% else %}
+                    <button type="submit" class="btn-action btn-toggle-on"
+                        data-confirm="¿Cambiar el estado de esta cuenta? Se reactivará el acceso al socio.">
+                        <i class='bx bx-user-check'></i> Activar
+                    </button>
+                    {% endif %}
+                </form>
+
+                <details class="member-reset-dropdown">
+                    <summary class="btn-action btn-reset" title="Restablecer contraseña">
+                        <i class='bx bx-key'></i> Restablecer
+                    </summary>
+                    <div class="reset-dropdown-content">
+                        <form method="post">
+                            <input type="hidden" name="csrf" value="{{ csrf }}">
+                            <input type="hidden" name="action" value="reset">
+                            <input type="hidden" name="id" value="{{ m.id }}">
+                            <label style="margin-bottom: 8px; font-size: 0.8rem; font-weight: 600;">
+                                Nueva contraseña temporal
+                                <input name="password" type="password" minlength="12" maxlength="128" required
+                                    placeholder="Mínimo 12 caracteres" style="margin-top: 4px; min-height: 36px; padding: 6px 8px; font-size: 0.85rem;">
+                            </label>
+                            <button class="primary" style="min-height: 34px; padding: 6px 12px; font-size: 0.8125rem; width: 100%;">
+                                <i class='bx bx-check'></i> Guardar
+                            </button>
+                        </form>
+                    </div>
+                </details>
+            </div>
+        </article>
+        {% else %}
+        <p class="muted" style="grid-column: 1 / -1;">Todavía no hay cuentas de socios.</p>
+        {% endfor %}
+
+        <div id="no-member-search-results" class="no-search-results" style="display: none; grid-column: 1 / -1;">
+            <i class='bx bx-search-alt'></i>
+            <p>No se encontraron socios que coincidan con "<strong></strong>".</p>
+            <button type="button" class="btn-action btn-edit" id="reset-member-search-btn">Restablecer búsqueda</button>
         </div>
-    </article>{% else %}<p class="muted">Todavía no hay cuentas de socios.</p>{% endfor %}
-</section>{% endblock %}
+    </div>
+
+    <div class="pagination-container" id="member-pagination-container" style="display: none;">
+        <span class="pagination-info" id="member-pagination-info"></span>
+        <div class="pagination-controls" id="member-pagination-controls"></div>
+    </div>
+</section>
+{% endblock %}

@@ -984,10 +984,478 @@ details form {
     max-width: 480px;
     width: 90%;
     margin: auto;
-
 }
 
 .custom-modal::backdrop {
     background: rgba(0, 0, 0, 0.5);
     backdrop-filter: blur(2px);
+}
+
+/* ==========================================================================
+   Tarjetas de datos habituales (Grid 2 columnas responsive y botones modernos)
+   ========================================================================== */
+
+.saved-records-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+    .saved-records-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+.saved-card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 13px 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.saved-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+}
+
+.saved-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 7px;
+}
+
+.saved-card-title {
+    margin: 0;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.3;
+    overflow-wrap: break-word;
+}
+
+.saved-card-owner {
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f1f5f9;
+    color: #64748b;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.saved-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+}
+
+.saved-card-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    font-size: 0.8125rem;
+    color: var(--muted);
+    line-height: 1.35;
+}
+
+.saved-card-row i {
+    font-size: 0.95rem;
+    color: #94a3b8;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.saved-card-row span {
+    overflow-wrap: anywhere;
+}
+
+.saved-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 11px;
+    padding-top: 9px;
+    border-top: 1px solid #f1f5f9;
+}
+
+/* Botones de acción con iconos acorde al diseño */
+.btn-action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.15s ease-in-out;
+    line-height: 1.2;
+}
+
+.btn-action i {
+    font-size: 0.95rem;
+    pointer-events: none;
+}
+
+/* Modificar - Color corporativo ASEMACO (naranja) */
+.btn-action.btn-edit {
+    background: #fff0e3;
+    color: var(--orange-dark);
+    border-color: #ffd8bf;
+}
+
+.btn-action.btn-edit:hover {
+    background: var(--orange-dark);
+    color: #ffffff;
+    border-color: var(--orange-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(168, 71, 5, 0.25);
+}
+
+.btn-action.btn-edit:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Eliminar - Color de peligro corporativo (rojo ASEMACO) */
+.btn-action.btn-delete {
+    background: #fdf2f2;
+    color: #a62d1e;
+    border-color: #fecaca;
+}
+
+.btn-action.btn-delete:hover {
+    background: #a62d1e;
+    color: #ffffff;
+    border-color: #a62d1e;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(166, 45, 30, 0.25);
+}
+
+.btn-action.btn-delete:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Buscador de registros */
+.search-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    max-width: 300px;
+    width: 100%;
+}
+
+.search-wrapper .search-icon {
+    position: absolute;
+    left: 11px;
+    font-size: 1.15rem;
+    color: var(--muted);
+    pointer-events: none;
+}
+
+.search-wrapper input {
+    width: 100%;
+    margin-top: 0;
+    padding: 8px 32px 8px 34px;
+    min-height: 38px;
+    font-size: 0.875rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.search-wrapper input:focus {
+    border-color: var(--orange);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(231, 121, 33, 0.15);
+}
+
+.search-wrapper .clear-search {
+    position: absolute;
+    right: 8px;
+    background: none;
+    border: none;
+    padding: 2px;
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 1.15rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.search-wrapper .clear-search:hover {
+    color: var(--ink);
+}
+
+/* Estado sin resultados de búsqueda */
+.no-search-results {
+    text-align: center;
+    padding: 36px 16px;
+    color: var(--muted);
+}
+
+.no-search-results i {
+    font-size: 2.8rem;
+    color: #cbd5e1;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.no-search-results p {
+    margin: 4px 0 14px;
+    font-size: 0.9375rem;
+}
+
+/* Paginación */
+.pagination-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+}
+
+.pagination-info {
+    font-size: 0.8125rem;
+    color: var(--muted);
+    font-weight: 500;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 34px;
+    height: 34px;
+    padding: 0 8px;
+    border-radius: 6px;
+    border: 1px solid var(--line);
+    background: #ffffff;
+    color: var(--ink);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: var(--orange-dark);
+    color: var(--orange-dark);
+    background: #fff0e3;
+}
+
+.pagination-btn.active {
+    background: var(--orange-dark);
+    border-color: var(--orange-dark);
+    color: #ffffff;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.pagination-btn i {
+    font-size: 1.15rem;
+    pointer-events: none;
+}
+
+/* ==========================================================================
+   Tarjetas de Socios (Admin: Grid 2 columnas responsive, botones modernos)
+   ========================================================================== */
+
+.members-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-top: 12px;
+}
+
+@media (max-width: 768px) {
+    .members-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
+
+.member-card {
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 13px 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    position: relative;
+}
+
+.member-card:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+    transform: translateY(-2px);
+}
+
+.member-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.member-card-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.member-card-title {
+    margin: 0 0 4px;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.3;
+    overflow-wrap: break-word;
+}
+
+.member-card-email {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8125rem;
+    color: var(--muted);
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+}
+
+.member-card-email i {
+    font-size: 0.95rem;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+
+.member-card-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 11px;
+    padding-top: 9px;
+    border-top: 1px solid #f1f5f9;
+}
+
+/* Botón Desactivar (rojo corporativo suave) */
+.btn-action.btn-toggle-off {
+    background: #fdf2f2;
+    color: #a62d1e;
+    border-color: #fecaca;
+}
+
+.btn-action.btn-toggle-off:hover {
+    background: #a62d1e;
+    color: #ffffff;
+    border-color: #a62d1e;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(166, 45, 30, 0.25);
+}
+
+.btn-action.btn-toggle-off:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Botón Activar (verde corporativo suave) */
+.btn-action.btn-toggle-on {
+    background: #edf2ef;
+    color: #2e5a3c;
+    border-color: #c6dcce;
+}
+
+.btn-action.btn-toggle-on:hover {
+    background: #2e5a3c;
+    color: #ffffff;
+    border-color: #2e5a3c;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(46, 90, 60, 0.25);
+}
+
+.btn-action.btn-toggle-on:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+/* Desplegable Restablecer Contraseña */
+.member-reset-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.member-reset-dropdown summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.member-reset-dropdown summary::-webkit-details-marker {
+    display: none;
+}
+
+.btn-action.btn-reset {
+    background: #fff0e3;
+    color: var(--orange-dark);
+    border-color: #ffd8bf;
+}
+
+.btn-action.btn-reset:hover {
+    background: var(--orange-dark);
+    color: #ffffff;
+    border-color: var(--orange-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(168, 71, 5, 0.25);
+}
+
+.btn-action.btn-reset:active {
+    transform: translateY(0);
+    box-shadow: none;
+}
+
+.reset-dropdown-content {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    background: #ffffff;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+    width: 240px;
+    z-index: 30;
 }
