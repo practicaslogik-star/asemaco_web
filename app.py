@@ -269,8 +269,25 @@ def create_app(test_config=None):
         kind=request.args.get('kind','cargadores')
         if kind not in CAT_FIELDS: abort(404)
         if request.method=='POST':
-            if request.form.get('action')=='delete':
-                db().execute('DELETE FROM entries WHERE id=? AND user_id=? AND kind=?',(request.form.get('id'),g.user['id'],kind)); db().commit(); flash('Registro eliminado. Los documentos generados se conservan.','success')
+            action = request.form.get('action')
+            if action == 'delete':
+                if g.user['role'] == 'admin':
+                    db().execute('DELETE FROM entries WHERE id=? AND kind=?',(request.form.get('id'),kind))
+                else:
+                    db().execute('DELETE FROM entries WHERE id=? AND user_id=? AND kind=?',(request.form.get('id'),g.user['id'],kind))
+                db().commit()
+                flash('Registro eliminado. Los documentos generados se conservan.','success')
+            elif action == 'edit':
+                data = clean(CAT_FIELDS[kind])
+                if not data.get('name'):
+                    flash('Completa el nombre o matrícula.', 'error')
+                else:
+                    if g.user['role'] == 'admin':
+                        db().execute('UPDATE entries SET data=? WHERE id=? AND kind=?', (json.dumps(data, ensure_ascii=False), request.form.get('id'), kind))
+                    else:
+                        db().execute('UPDATE entries SET data=? WHERE id=? AND user_id=? AND kind=?', (json.dumps(data, ensure_ascii=False), request.form.get('id'), g.user['id'], kind))
+                    db().commit()
+                    flash('Registro actualizado correctamente.', 'success')
             else:
                 data=clean(CAT_FIELDS[kind])
                 if not data['name']: flash('Completa el nombre o matrícula.','error')
@@ -278,6 +295,7 @@ def create_app(test_config=None):
                 else:
                     db().execute('INSERT INTO entries(user_id,kind,data) VALUES(?,?,?)',(g.user['id'],kind,json.dumps(data,ensure_ascii=False))); db().commit(); flash('Registro guardado.','success')
             return redirect(url_for('datos_habituales',kind=kind))
+        
         if g.user['role'] == 'admin':
             rows=db().execute('SELECT * FROM entries WHERE kind=? ORDER BY id DESC',(kind,)).fetchall()
         else:

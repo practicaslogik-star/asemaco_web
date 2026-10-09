@@ -58,3 +58,67 @@ document.querySelectorAll('.password-toggle').forEach(boton => {
         }
     });
 });
+
+// modales de editar y borrar
+
+const deleteModal = document.getElementById('delete-modal');
+const editModal = document.getElementById('edit-modal');
+
+// abirir modal eliminar
+document.querySelectorAll('.btn-delete').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const name = btn.dataset.name;
+
+        const idInput = document.getElementById('delete-record-id');
+        const nameEl = document.getElementById('delete-record-name');
+
+        if (idInput) idInput.value = id;
+        if (nameEl) nameEl.textContent = `"${name}"`;
+
+        deleteModal?.showModal();
+    });
+});
+
+// Cerrar modal de eliminación
+document.getElementById('cancel-delete-btn')?.addEventListener('click', () => {
+    deleteModal?.close();
+});
+
+//abrir modal editar
+document.querySelectorAll('.btn-edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        let info = {};
+        try {
+            info = JSON.parse(btn.dataset.info || '{}');
+        } catch (e) {
+            console.error('Error parseando datos del registro:', e);
+        }
+
+        // Asignar el ID al campo oculto
+        const idInput = document.getElementById('edit-record-id');
+        if (idInput) idInput.value = id;
+
+        // Rellenar cada input según los datos del registro (nombre, nif, dirección, etc.)
+        Object.entries(info).forEach(([key, val]) => {
+            const input = document.getElementById(`edit-field-${key}`);
+            if (input) input.value = val || '';
+        });
+
+        editModal?.showModal();
+    });
+});
+
+// Cerrar modal de modificación
+document.getElementById('cancel-edit-btn')?.addEventListener('click', () => {
+    editModal?.close();
+});
+
+// Cerrar modales si el usuario hace clic fuera de la ventana (en el fondo oscuro)
+[deleteModal, editModal].forEach(modal => {
+    modal?.addEventListener('click', (e) => {
+        if (e.target === modal) modal.close();
+    });
+});
+

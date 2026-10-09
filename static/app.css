@@ -971,3 +971,23 @@ details form {
     background: #a62d1e;
     color: #fff
 }
+
+
+
+/* modales datos habituales  */
+
+.custom-modal {
+    border: none;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+    padding: 1.5rem;
+    max-width: 480px;
+    width: 90%;
+    margin: auto;
+
+}
+
+.custom-modal::backdrop {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(2px);
+}
