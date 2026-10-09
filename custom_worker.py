@@ -49,13 +49,13 @@ def limpiar_documentos_y_qr():
                 cursor.execute('DELETE FROM documents WHERE id=?', (row['id'],))
                 borrados += 1
             
-            # 2. Borrar (invalidar) el QR después de 7 días
+            # 2. Desactivar el QR después de 7 días (revocando el acceso público sin romper la descarga del PDF)
             elif diferencia_tiempo > timedelta(days=7):
-                # Si el token existe y es un QR activo (no empieza por caducado_)
-                if row['token'] and not row['token'].startswith('caducado_'):
-                    print(f"Caducando QR del documento {row['id']} por tener más de 7 días.")
-                    # Modificamos el token en base de datos para que el enlace QR original deje de funcionar
-                    cursor.execute("UPDATE documents SET token = 'caducado_' || token WHERE id=?", (row['id'],))
+                if not row['revoked']:
+                    print(f"Desactivando consulta QR del documento {row['id']} por tener más de 7 días.")
+                    cursor.execute("UPDATE documents SET revoked = 1 WHERE id=?", (row['id'],))
+                    cursor.execute("INSERT INTO deca_events(document_id,user_id,event,at,detail) VALUES(?,?,?,?,?)",
+                                   (row['id'], row['user_id'], 'desactivacion_qr_automatica', ahora.isoformat(timespec='seconds'), 'Caducidad automatica tras 7 dias'))
                     qrs_anulados += 1
 
         bbdd.commit()

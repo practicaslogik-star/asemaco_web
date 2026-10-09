@@ -121,7 +121,6 @@ document.getElementById('cancel-edit-btn')?.addEventListener('click', () => {
         if (e.target === modal) modal.close();
     });
 });
-
 // --- Buscador y Paginación Reutilizable (Datos Habituales y Admin) ---
 function setupGridPaginationAndSearch({
     gridSelector,

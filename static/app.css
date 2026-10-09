@@ -983,7 +983,6 @@ details form {
     padding: 1.5rem;
     max-width: 480px;
     width: 90%;
-    margin: auto;
 }
 
 .custom-modal::backdrop {

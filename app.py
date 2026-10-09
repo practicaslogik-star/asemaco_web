@@ -106,7 +106,7 @@ def create_app(test_config=None):
         response.headers['X-Content-Type-Options']='nosniff'
         response.headers['X-Frame-Options']='SAMEORIGIN'
         response.headers['Referrer-Policy']='no-referrer'
-        response.headers['Content-Security-Policy']="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+        response.headers['Content-Security-Policy']="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; font-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
         response.headers['X-Robots-Tag']='noindex, nofollow, noarchive'
         if request.endpoint!='static': response.headers['Cache-Control']='no-store'
         if app.config['SESSION_COOKIE_SECURE']: response.headers['Strict-Transport-Security']='max-age=31536000'
@@ -319,10 +319,8 @@ def create_app(test_config=None):
             now=datetime.now(ZoneInfo('Europe/Madrid'))
             planned_default=now+timedelta(minutes=30)
             data={'date':planned_default.strftime('%Y-%m-%d'),'time':planned_default.strftime('%H:%M'),'place':p.get('city',''),'carrier':p,'goods':[]}
-        except Exception as e:
-            import traceback
-            with open('scratch_error.txt', 'w') as f:
-                f.write(traceback.format_exc())
+        except Exception:
+            app.logger.exception('Error preparando nuevo documento')
             raise
         if source:
             data=json.loads(source['data']); data['change_reason']=''
@@ -424,13 +422,7 @@ def create_app(test_config=None):
                     (directory/'pdfs'/f'{token}.pdf').unlink(missing_ok=True)
                     app.logger.exception('Error generando documento'); flash('No se pudo guardar el documento. Tus datos siguen en el formulario.','error')
                 else: return redirect(url_for('document',doc_id=cur.lastrowid))
-        try:
-            return render_template('new.html',data=data,catalog=catalog,next_number=g.user['next_number'],source=source)
-        except Exception as e:
-            import traceback
-            with open('scratch_error_render.txt', 'w') as f:
-                f.write(traceback.format_exc())
-            raise
+        return render_template('new.html',data=data,catalog=catalog,next_number=g.user['next_number'],source=source)
 
     @app.get('/documents/<int:doc_id>')
     @login_required
