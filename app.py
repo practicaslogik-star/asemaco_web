@@ -147,16 +147,72 @@ def create_app(test_config=None):
 
     dummy_hash=generate_password_hash(secrets.token_urlsafe(24))
 
-    # ruta para la pagina de forgot paswword
+
+    def enviar_correo_recuperacion(email_usuario, password_temporal):
+        remitente = (os.getenv("MAIL_USERNAME") or "").strip()
+        password = (os.getenv("MAIL_PASSWORD") or "").strip().replace(" ", "")
+
+        if not remitente or not password:
+            raise RuntimeError("Las credenciales de correo MAIL_USERNAME o MAIL_PASSWORD no están configuradas.")
+
+        msg = EmailMessage()
+        msg["Subject"] = "Recuperación de contraseña - Contraseña temporal"
+        msg["From"] = remitente
+        msg["To"] = remitente  # Se envía a sí mismo (MAIL_USERNAME)
+        
+        msg.set_content(
+            f"Hola Administración,\n\n"
+            f"Se ha solicitado una recuperación de contraseña para la cuenta asociada a: {email_usuario}\n\n"
+            f"Se ha generado la siguiente contraseña temporal de acceso:\n"
+            f"{password_temporal}\n\n"
+            f"El usuario deberá iniciar sesión con ella y la aplicación le obligará a cambiarla inmediatamente.\n\n"
+            f"Atentamente,\nSistema ASEMACO"
+        )
+
+        contexto_ssl = ssl.create_default_context()
+
+        with smtplib.SMTP_SSL("smtp.gmail.com", 465, timeout=20, context=contexto_ssl) as smtp:
+            smtp.set_debuglevel(1)
+            smtp.login(remitente, password)
+            smtp.send_message(msg)
+            
     @app.route('/forgot-password', methods=['GET', 'POST'])
     def forgot_password():
         if request.method == 'POST':
+            email = request.form.get('email', '').strip().lower()[:254]
             
-            flash('Si el correo existe, se han enviado las instrucciones a tu bandeja.', 'success')
+            if email:
+                usuario = db().execute(
+                    'SELECT * FROM users WHERE email = ? AND active = 1', 
+                    (email,)
+                ).fetchone()
+                
+                if usuario:
+                    try:
+                        # 1. Generar una contraseña temporal segura
+                        password_temporal = secrets.token_urlsafe(10) # ~13 caracteres seguros
+                        hashed_pw = generate_password_hash(password_temporal)
+                        
+                        # 2. Actualizar en la base de datos: nueva pass, must_change = 1 y subir auth_version para cerrar sesiones activas
+                        db().execute(
+                            'UPDATE users SET password = ?, must_change = 1, auth_version = auth_version + 1 WHERE id = ?',
+                            (hashed_pw, usuario['id'])
+                        )
+                        db().commit()
+                        
+                        # 3. Enviar el correo con la contraseña temporal
+                        enviar_correo_recuperacion(usuario['email'], password_temporal)
+                        
+                        app.logger.info(f"Contraseña temporal generada y enviada para el usuario ID: {usuario['id']}")
+                    except Exception as e:
+                        db().rollback()
+                        app.logger.exception("Error al procesar la recuperación de contraseña SMTP")
+                
+            flash('Si el correo existe en el sistema, se han enviado las instrucciones a tu bandeja.', 'success')
             return redirect(url_for('login'))
-        # redirigir a la pagina de olvidar la contraseña 
+            
         return render_template('forgot_password.html')
-
+    
     @app.route('/login',methods=['GET','POST'])
     def login():
         if g.user: return redirect(url_for('home'))
@@ -615,60 +671,60 @@ def create_app(test_config=None):
 # FUNCIÓN DE PRUEBA PARA ENVIAR CORREOS
 # ==========================================
 
-    def enviar_correo_recuperacion(destinatario):
-        print("Remitente:", repr(os.getenv("MAIL_USERNAME")))
-        print(
-            "Contraseña configurada:",
-            bool(os.getenv("MAIL_PASSWORD"))
-        )
-        # Leemos las credenciales desde el entorno
-        remitente = (os.getenv("MAIL_USERNAME") or "").strip()
-        password = (
-            (os.getenv("MAIL_PASSWORD") or "")
-            .strip()
-            .replace(" ", "")
-        )
-
-        msg = EmailMessage()
-        msg["Subject"] = "Recuperar contraseña"
-        msg["From"] = remitente
-        msg["To"] = destinatario
-        msg.set_content("HOLA practicas")
-
-        contexto_ssl = ssl.create_default_context()
-
-        with smtplib.SMTP_SSL(
-            "smtp.gmail.com",
-            465,
-            timeout=20,
-            context=contexto_ssl
-        ) as smtp:
-            #smtp.starttls()
-            smtp.set_debuglevel(1)
-            smtp.login(remitente, password)
-            smtp.send_message(msg)
+#   def enviar_correo_recuperacion(destinatario):
+#       print("Remitente:", repr(os.getenv("MAIL_USERNAME")))
+#       print(
+#           "Contraseña configurada:",
+#           bool(os.getenv("MAIL_PASSWORD"))
+#       )
+#       # Leemos las credenciales desde el entorno
+#       remitente = (os.getenv("MAIL_USERNAME") or "").strip()
+#       password = (
+#           (os.getenv("MAIL_PASSWORD") or "")
+#           .strip()
+#           .replace(" ", "")
+#       )
+#
+#       msg = EmailMessage()
+#       msg["Subject"] = "Recuperar contraseña"
+#       msg["From"] = remitente
+#       msg["To"] = destinatario
+#       msg.set_content("HOLA practicas")
+#
+#       contexto_ssl = ssl.create_default_context()
+#
+#       with smtplib.SMTP_SSL(
+#           "smtp.gmail.com",
+#           465,
+#           timeout=20,
+#           context=contexto_ssl
+#       ) as smtp:
+#           #smtp.starttls()
+#           smtp.set_debuglevel(1)
+#           smtp.login(remitente, password)
+#           smtp.send_message(msg)
     
-    @app.get("/test-correo")
-    def test_correo():
-        try:
-            enviar_correo_recuperacion(
-                "practicaslogik@gmail.com"
-            )
-
-            return "¡Correo enviado con éxito!", 200
-
-        except Exception as e:
-            app.logger.exception(
-                "Error al ejecutar la prueba de correo SMTP"
-            )
-
-            return (
-                f"Error al enviar el correo: "
-                f"{type(e).__name__}: {e}. "
-                "Consulta la consola de Flask para ver "
-                "el traceback completo."
-            ), 500
-
+#    @app.get("/test-correo")
+#    def test_correo():
+#        try:
+#            enviar_correo_recuperacion(
+#                "practicaslogik@gmail.com"
+#            )
+#
+#            return "¡Correo enviado con éxito!", 200
+#
+#        except Exception as e:
+#            app.logger.exception(
+#                "Error al ejecutar la prueba de correo SMTP"
+#            )
+#
+#            return (
+#                f"Error al enviar el correo: "
+#                f"{type(e).__name__}: {e}. "
+#                "Consulta la consola de Flask para ver "
+#                "el traceback completo."
+#            ), 500
+#
     @app.cli.command('create-admin')
     @click.option('--email',prompt=True)
     @click.option('--password',prompt=True,hide_input=True,confirmation_prompt=True)
